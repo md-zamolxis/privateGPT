@@ -1,14 +1,45 @@
 services:
-  private-gpt:
+  private-gpt-run:
+    image: private-gpt
     build:
       dockerfile: Dockerfile.local
     volumes:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
+      - ./docs/:/home/worker/app/docs
     ports:
       - 8001:8080
     environment:
       PORT: 8080
-      PGPT_PROFILES: docker
+      PGPT_PROFILES: default
       PGPT_MODE: local
+    networks:
+      - web
+      - no-internet
+    #cap_add:
+    #  - NET_RAW
+    #  - NET_ADMIN
+    #command: ["tcpdump", "-i", "eth0", "-w", "/home/worker/app/logs/out_traffic.pcap"]
+      
+  private-gpt-ingest:
+    image: private-gpt
+    build:
+      dockerfile: Dockerfile.local
+    volumes:
+      - ./local_data/:/home/worker/app/local_data
+      - ./models/:/home/worker/app/models
+      - ./docs/:/home/worker/app/docs
+    environment:
+      PORT: 8080
+      PGPT_PROFILES: default
+      PGPT_MODE: local
+    entrypoint: poetry run python scripts/ingest_folder.py docs
+    networks:
+      - no-internet
 
+networks:
+  web:
+    driver: bridge
+  no-internet:
+    driver: bridge
+    internal: true
